@@ -87,6 +87,44 @@ export function playerStats(matches: Match[], name: string): PlayerStats {
 
 export const allStats = (matches: Match[]) => PLAYERS.map((p) => playerStats(matches, p));
 
+export type Mode = "all" | "solo" | "duo";
+
+export const filterByMode = (matches: Match[], mode: Mode) =>
+  matches.filter((m) => mode === "all" || (mode === "solo" ? isSolo(m) : !isSolo(m)));
+
+/** Standings order: win rate, then goal difference, then games played. */
+export const rankPlayers = (stats: PlayerStats[]) =>
+  [...stats].sort((a, b) => b.winRate - a.winRate || b.diff - a.diff || b.played - a.played);
+
+export type RankedStats = PlayerStats & { pos: number; delta: number; points: number };
+
+/** Standings plus how many places each player moved since the previous match day. */
+export function standings(matches: Match[]): RankedStats[] {
+  const now = rankPlayers(allStats(matches));
+  const sorted = chrono(matches);
+  const lastDay = sorted[sorted.length - 1]?.date;
+  const prev = rankPlayers(allStats(sorted.filter((m) => m.date !== lastDay)));
+  return now.map((s, i) => ({
+    ...s,
+    pos: i + 1,
+    delta: lastDay ? prev.findIndex((p) => p.name === s.name) - i : 0,
+    points: s.wins * 3 + s.draws,
+  }));
+}
+
+/** Longest run of wins in a player's history. */
+export function bestWinStreak(matches: Match[], player: string) {
+  let best = 0;
+  let cur = 0;
+  for (const m of chrono(matches)) {
+    const r = outcome(m, player);
+    if (!r) continue;
+    cur = r === "V" ? cur + 1 : 0;
+    best = Math.max(best, cur);
+  }
+  return best;
+}
+
 /** Matches where a and b were on opposite sides. Counts from a's point of view. */
 export function headToHead(matches: Match[], a: string, b: string) {
   let wins = 0;

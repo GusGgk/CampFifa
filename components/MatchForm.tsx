@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Check, Minus, Plus } from "lucide-react";
 import { PLAYERS, type Match } from "@/lib/types";
 import { matchFacts, type Fact } from "@/lib/facts";
 import { teamLabel } from "@/lib/stats";
-import { Avatar, colorVar } from "./ui";
+import { Avatar, FactList, Score, colorVar } from "./ui";
 
 const PIN_KEY = "campfifa-pin";
 
@@ -31,7 +32,7 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
   return (
     <div className="stepper">
       <button type="button" onClick={() => onChange(Math.max(0, value - 1))} aria-label={`Diminuir ${label}`}>
-        −
+        <Minus size={16} />
       </button>
       <input
         className="num"
@@ -43,7 +44,7 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
         onChange={(e) => onChange(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
       />
       <button type="button" onClick={() => onChange(Math.min(99, value + 1))} aria-label={`Aumentar ${label}`}>
-        +
+        <Plus size={16} />
       </button>
     </div>
   );
@@ -109,20 +110,20 @@ export default function MatchForm({
   }
 
   const side = (key: "A" | "B", team: string[], other: string[], score: number, setScore: (v: number) => void) => (
-    <div className="side">
+    <div className="team-pick">
       <span className="label">Time {key}</span>
-      <div className="chips">
+      <div className="pick-list">
         {PLAYERS.map((p) => (
           <button
             key={p}
             type="button"
-            className="chip"
+            className="pick"
             style={colorVar(p)}
             aria-pressed={team.includes(p)}
             disabled={other.includes(p) || (!team.includes(p) && team.length >= 2)}
             onClick={() => toggle(key, p)}
           >
-            <Avatar name={p} />
+            <Avatar name={p} size="sm" />
             {p}
           </button>
         ))}
@@ -136,16 +137,14 @@ export default function MatchForm({
       <div className="modal" role="dialog" aria-modal="true" aria-label="Nova partida">
         {result ? (
           <>
-            <div className="result-banner">
-              <div className="sub" style={{ margin: 0 }}>
-                Partida registrada ✓
-              </div>
-              <div className="final num">
-                {result.match.scoreA} <span style={{ color: "var(--muted)" }}>x</span> {result.match.scoreB}
-              </div>
+            <div className="saved">
+              <span className="label" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <Check size={14} /> Partida registrada
+              </span>
+              <Score m={result.match} />
               <div>
                 {result.match.scoreA === result.match.scoreB ? (
-                  <span className="who-won">Empate!</span>
+                  <span className="who-won">Empate</span>
                 ) : (
                   <>
                     <span className="who-won">
@@ -157,35 +156,26 @@ export default function MatchForm({
                 )}
               </div>
             </div>
-            {result.facts.length > 0 && (
-              <ul className="fact-list">
-                {result.facts.map((f, i) => (
-                  <li key={i} style={{ animationDelay: `${150 + i * 110}ms` }}>
-                    <span>{f.icon}</span>
-                    <span>{f.text}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {result.facts.length > 0 && <FactList facts={result.facts} compact />}
             <div className="modal-actions" style={{ marginTop: 18 }}>
               <button className="btn" onClick={() => setResult(null)}>
                 Registrar outra
               </button>
               <button className="btn btn-primary" onClick={onClose}>
-                Ver dashboard
+                Fechar
               </button>
             </div>
           </>
         ) : (
           <form onSubmit={submit}>
-            <h3>Nova partida</h3>
+            <h2>Nova partida</h2>
             <div className="row-2">
               <div className="field">
-                <label htmlFor="f-date">Data</label>
+                <label className="label" htmlFor="f-date">Data</label>
                 <input id="f-date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
               </div>
               <div className="field">
-                <label htmlFor="f-loc">Local</label>
+                <label className="label" htmlFor="f-loc">Local</label>
                 <input
                   id="f-loc"
                   className="input"
@@ -204,11 +194,11 @@ export default function MatchForm({
             </div>
             <div className="versus">
               {side("A", teamA, teamB, scoreA, setScoreA)}
-              <span className="vs">VS</span>
+              <span className="vs-tag">VS</span>
               {side("B", teamB, teamA, scoreB, setScoreB)}
             </div>
             <div className="field">
-              <label htmlFor="f-pin">PIN do grupo</label>
+              <label className="label" htmlFor="f-pin">PIN do grupo</label>
               <input
                 id="f-pin"
                 className="input"

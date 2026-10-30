@@ -9,14 +9,15 @@ const W = 640;
 const H = 240;
 const M = { l: 36, r: 64, t: 14, b: 26 };
 
-export function WinRateChart({ matches }: { matches: Match[] }) {
+/** `focus` highlights one player and fades the others (player profile). */
+export function WinRateChart({ matches, focus }: { matches: Match[]; focus?: string }) {
   const data = winRateTimeline(matches);
   const wrap = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
   const active = PLAYERS.filter((p) => data.some((d) => d.rates[p] != null));
 
   if (data.length < 2) {
-    return <p className="sub">Registre pelo menos 2 partidas para ver a evolução.</p>;
+    return <p className="muted">Registre pelo menos 2 partidas para ver a evolução.</p>;
   }
 
   const n = data.length;
@@ -65,7 +66,7 @@ export function WinRateChart({ matches }: { matches: Match[] }) {
       >
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={M.l} x2={W - M.r} y1={y(t)} y2={y(t)} stroke="var(--grid)" strokeWidth={1} />
+            <line x1={M.l} x2={W - M.r} y1={y(t)} y2={y(t)} stroke="var(--line)" strokeWidth={1} />
             <text x={M.l - 8} y={y(t) + 4} textAnchor="end" className="axis-text">
               {t * 100}%
             </text>
@@ -82,7 +83,8 @@ export function WinRateChart({ matches }: { matches: Match[] }) {
             d={d}
             fill="none"
             stroke={playerColor(p)}
-            strokeWidth={2}
+            strokeWidth={focus === p ? 3 : 2}
+            strokeOpacity={focus && focus !== p ? 0.25 : 1}
             strokeLinejoin="round"
             strokeLinecap="round"
             style={{ transition: "d 0.6s" }}
@@ -90,15 +92,15 @@ export function WinRateChart({ matches }: { matches: Match[] }) {
         ))}
         {ends.map((e) => (
           <g key={e.p}>
-            <circle cx={x(n - 1)} cy={y(e.v)} r={4} fill={playerColor(e.p)} stroke="var(--surface)" strokeWidth={2} />
-            <text x={x(n - 1) + 10} y={e.y + 4} className="axis-text" style={{ fill: "var(--text-2)" }}>
+            <circle cx={x(n - 1)} cy={y(e.v)} r={4} fill={playerColor(e.p)} stroke="var(--bg)" strokeWidth={2} />
+            <text x={x(n - 1) + 10} y={e.y + 4} className="axis-text" style={{ fill: "var(--fg)" }}>
               {e.p}
             </text>
           </g>
         ))}
         {h && hover != null && (
           <g pointerEvents="none">
-            <line x1={x(hover)} x2={x(hover)} y1={M.t} y2={H - M.b} stroke="var(--border-strong)" strokeWidth={1} />
+            <line x1={x(hover)} x2={x(hover)} y1={M.t} y2={H - M.b} stroke="var(--mut)" strokeWidth={1} />
             {active.map((p) =>
               h.rates[p] == null ? null : (
                 <circle
@@ -107,7 +109,7 @@ export function WinRateChart({ matches }: { matches: Match[] }) {
                   cy={y(h.rates[p] as number)}
                   r={5}
                   fill={playerColor(p)}
-                  stroke="var(--surface)"
+                  stroke="var(--bg)"
                   strokeWidth={2}
                 />
               ),
@@ -149,7 +151,7 @@ export function WinRateChart({ matches }: { matches: Match[] }) {
 
 export function GoalsChart({ stats }: { stats: PlayerStats[] }) {
   const rows = stats.filter((s) => s.played > 0);
-  if (!rows.length) return <p className="sub">Sem dados ainda.</p>;
+  if (!rows.length) return <p className="muted">Sem dados ainda.</p>;
   const max = Math.max(1, ...rows.flatMap((s) => [s.gfAvg, s.gaAvg]));
   return (
     <>
@@ -157,7 +159,7 @@ export function GoalsChart({ stats }: { stats: PlayerStats[] }) {
         {rows.map((s) => (
           <div className="bar-row" key={s.name}>
             <div className="who">
-              <Avatar name={s.name} small />
+              <Avatar name={s.name} size="sm" />
               {s.name}
             </div>
             <div className="bar-pair">
@@ -166,7 +168,7 @@ export function GoalsChart({ stats }: { stats: PlayerStats[] }) {
                 <span className="bar-val">{s.gfAvg.toFixed(1)}</span>
               </div>
               <div className="bar-line" title={`${s.name}: ${s.ga} gols sofridos em ${s.played} jogos`}>
-                <span className="bar" style={{ width: `${(s.gaAvg / max) * 85}%`, background: "var(--bar-against)" }} />
+                <span className="bar" style={{ width: `${(s.gaAvg / max) * 85}%`, background: "var(--mut)", opacity: 0.45 }} />
                 <span className="bar-val">{s.gaAvg.toFixed(1)}</span>
               </div>
             </div>
@@ -175,11 +177,11 @@ export function GoalsChart({ stats }: { stats: PlayerStats[] }) {
       </div>
       <div className="legend" style={{ marginTop: 16 }}>
         <span>
-          <i style={{ background: "var(--text-2)" }} />
+          <i style={{ background: "var(--fg)" }} />
           Feitos (cor do jogador)
         </span>
         <span>
-          <i style={{ background: "var(--bar-against)" }} />
+          <i style={{ background: "var(--mut)", opacity: 0.45 }} />
           Sofridos
         </span>
       </div>
@@ -189,34 +191,33 @@ export function GoalsChart({ stats }: { stats: PlayerStats[] }) {
 
 export function HeadToHead({ matches }: { matches: Match[] }) {
   return (
+    <div className="scroll-x">
     <table className="h2h">
       <thead>
         <tr>
           <th />
           {PLAYERS.map((p) => (
-            <th key={p}>vs {p}</th>
+            <th key={p}>{p}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {PLAYERS.map((a) => (
           <tr key={a}>
-            <th className="row-head">{a}</th>
+            <th className="rh">{a}</th>
             {PLAYERS.map((b) => {
               if (a === b) return <td key={b} className="self">—</td>;
               const h = headToHead(matches, a, b);
               const rate = h.played ? h.wins / h.played : null;
-              // Tint by win rate against this opponent: green-ish when dominant, red-ish when dominated.
-              const bg =
-                rate == null
-                  ? undefined
-                  : `color-mix(in oklab, ${rate >= 0.5 ? "var(--win)" : "var(--loss)"} ${Math.round(Math.abs(rate - 0.5) * 50)}%, var(--surface-2))`;
+              // The more orange, the more the row player dominates the column player.
               return (
-                <td key={b} style={{ background: bg }} title={`${a} vs ${b}: ${h.wins}V ${h.draws}E ${h.losses}D`}>
-                  <span className="rec num">
-                    {h.wins}-{h.draws}-{h.losses}
-                  </span>
-                  <span className="pct">{rate == null ? "sem jogos" : pct(rate)}</span>
+                <td
+                  key={b}
+                  style={{ "--h": rate ?? 0 } as React.CSSProperties}
+                  title={`${a} contra ${b}: ${h.wins}V ${h.draws}E ${h.losses}D`}
+                >
+                  {h.wins}-{h.draws}-{h.losses}
+                  <small>{rate == null ? "sem jogos" : pct(rate)}</small>
                 </td>
               );
             })}
@@ -224,5 +225,6 @@ export function HeadToHead({ matches }: { matches: Match[] }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

@@ -1,4 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
+import { DATA_TAG } from "@/lib/data";
 import { insertMatch, listMatches } from "@/lib/db";
 import { pinOk } from "@/lib/auth";
 import { PLAYERS, type NewMatch } from "@/lib/types";
@@ -35,5 +37,7 @@ export async function POST(req: Request) {
   if (!pinOk(req)) return NextResponse.json({ error: "PIN incorreto" }, { status: 401 });
   const parsed = parse(await req.json().catch(() => null));
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
-  return NextResponse.json(await insertMatch(parsed), { status: 201 });
+  const match = await insertMatch(parsed);
+  revalidateTag(DATA_TAG);
+  return NextResponse.json(match, { status: 201 });
 }
