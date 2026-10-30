@@ -1,8 +1,13 @@
 node_modules
 .next
-.env*.local
-.env
+.env*
+!.env.example
 data/*.json
 next-env.d.ts
 *.tsbuildinfo
 .vercel
+
+# local agent tooling installed by the Vercel/Neon CLI
+.agents
+.claude/skills
+skills-lock.json
