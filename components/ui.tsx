@@ -93,7 +93,8 @@ export const TIERS = [
 ];
 
 export function tierOf(pos: number, total: number, played: number) {
-  if (!played) return { label: "Sem jogos", color: "var(--line)" };
+  // Secondary text color: readable on both themes (the divider color is nearly invisible as text).
+  if (!played) return { label: "Sem jogos", color: "var(--mut)" };
   return pos === total ? TIERS[TIERS.length - 1] : (TIERS[pos - 1] ?? TIERS[2]);
 }
 
